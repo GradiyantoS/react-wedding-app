@@ -3,72 +3,186 @@ import { collection, query, where, getDocs, orderBy, limit, startAfter } from "f
 import { Link } from 'react-router-dom';
 import { db } from "../../firebaseConfig";
 import '../../styles/PhotoViewer.css';
+import '../../styles/App.css';
 
 export default function PhotoViewer() {
-    const [images, setImages] = useState([]);
-    const [lastDoc, setLastDoc] = useState(null);
-    const [loading, setLoading] = useState(false);
-  
-    useEffect(() => {
-      fetchImages();
-    }, []);
-  
-    const fetchImages = async () => {
-      setLoading(true);
-      try {
-        const baseQuery = query(
-          collection(db, "images"),
-          where("is_public", "==", true),
-          orderBy("username"),
-          limit(10)
-        );
-        const paginatedQuery = lastDoc ? query(baseQuery, startAfter(lastDoc)) : baseQuery;
-  
-        const querySnapshot = await getDocs(paginatedQuery);
-        const newImages = [];
-  
-        querySnapshot.forEach((doc) => {
-          newImages.push(doc.data());
-        });
-  
-        setImages((prev) => [...prev, ...newImages]);
-        setLastDoc(querySnapshot.docs[querySnapshot.docs.length - 1]);
-      } catch (error) {
-        console.error("Error fetching shared photos:", error);
-      } finally {
-        setLoading(false);
+  const [sharedPhotos, setSharedPhotos] = useState([]);
+  const [currentImageIndex, setCurrentImageIndex] = useState(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [lastDoc, setLastDoc] = useState(null);
+  const [hasMore, setHasMore] = useState(true);
+
+  const [startX, setStartX] = useState(null);
+  const [endX, setEndX] = useState(null);
+
+  useEffect(() => {
+    fetchSharedPhotos();
+  }, []);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      if (
+        window.innerHeight + document.documentElement.scrollTop + 1 >=
+          document.documentElement.scrollHeight &&
+        hasMore &&
+        !isLoading
+      ) {
+        fetchSharedPhotos();
       }
     };
   
-    return (
-      <div className="shared-page">
-        <h2 className="text-2xl font-bold text-center">Shared Photos</h2>
-        <p className="text-lg mt-2 text-center">View public photos shared by others.</p>
-  
-        <div className="image-grid mt-6">
-          {images.map((image, index) => (
-            <div key={index} className="image-card">
-              <img src={image.image} alt="Shared" className="shared-image" />
-              <div className="image-details">
-                <p className="username">Uploader: {image.username}</p>
-                <p className="public-status">Status: {image.is_public ? 'Public' : 'Private'}</p>
-              </div>
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, [hasMore]);
+
+  const fetchSharedPhotos = async () => {
+    if (isLoading || !hasMore) return; // Prevent unnecessary fetches
+
+    setIsLoading(true);
+    try {
+      const q = lastDoc
+        ? query(
+            collection(db, "images"),
+            where("is_public", "==", true),
+            startAfter(lastDoc),
+            limit(10)
+          )
+        : query(collection(db, "images"), where("is_public", "==", true), limit(10));
+
+      const querySnapshot = await getDocs(q);
+
+      if (!querySnapshot.empty) {
+        const newPhotos = [];
+        querySnapshot.forEach((doc) => {
+          const data = doc.data();
+          if (data.image && !sharedPhotos.find((photo) => photo.image === data.image)) {
+            // Only add unique images
+            newPhotos.push(data);
+          }
+        });
+
+        setSharedPhotos((prevPhotos) => [...prevPhotos, ...newPhotos]);
+        setLastDoc(querySnapshot.docs[querySnapshot.docs.length - 1]);
+        setHasMore(querySnapshot.docs.length === 10); // Assume limit(10)
+      } else {
+        setHasMore(false); // No more documents
+      }
+    } catch (error) {
+      console.error("Error fetching shared photos:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const openImage = (index) => {
+    setCurrentImageIndex(index);
+  };
+
+  const closeImage = () => {
+    setCurrentImageIndex(null);
+  };
+
+  const goToNextImage = () => {
+    if (currentImageIndex !== null) {
+      setCurrentImageIndex((currentImageIndex + 1) % sharedPhotos.length);
+    }
+  };
+
+  const goToPrevImage = () => {
+    if (currentImageIndex !== null) {
+      setCurrentImageIndex((currentImageIndex - 1 + sharedPhotos.length) % sharedPhotos.length);
+    }
+  };
+
+  const handleTouchStart = (e) => {
+    setStartX(e.touches[0].clientX);
+  };
+
+  const handleTouchMove = (e) => {
+    setEndX(e.touches[0].clientX);
+  };
+
+  const handleTouchEnd = () => {
+    if (startX && endX) {
+      const diff = startX - endX;
+      if (diff > 50) {
+        goToNextImage();
+      } else if (diff < -50) {
+        goToPrevImage();
+      }
+    }
+    setStartX(null);
+    setEndX(null);
+  };
+
+  const handleModalClick = (e) => {
+    if (e.target.classList.contains('modal-overlay')) {
+      closeImage();
+    }
+  };
+
+  return (
+    <div className="shared-page">
+      <h2 className="text-2xl font-bold">Shared Photos</h2>
+      <p className="text-lg mt-2">Browse photos shared by others.</p>
+
+      {sharedPhotos.length === 0 && !isLoading && (
+        <p className="text-gray-500 mt-4">No shared photos available.</p>
+      )}
+
+      <div className="image-grid mt-6">
+        {sharedPhotos.map((photo, index) => (
+          <div key={index} className="relative border border-gray-300 rounded-lg overflow-hidden group">
+            <img
+              className="w-full h-40 object-cover cursor-pointer"
+              src={photo.image}
+              alt="Uploaded"
+              onClick={() => openImage(index)}
+            />
+            <div className="absolute bottom-0 left-0 w-full bg-gray-800 bg-opacity-50 text-white text-sm px-2 py-1">
+              <span>{photo.username || 'Unknown User'}</span>
             </div>
-          ))}
-        </div>
-  
-        {loading && <p className="loading">Loading...</p>}
-  
-        {!loading && lastDoc && (
-          <button onClick={fetchImages} className="load-more-btn">
-            Load More
-          </button>
-        )}
-  
-        <div className="navigation-links">
-          <Link to="/" className="nav-link">Go to Main Page</Link>
-          <Link to="/manage" className="nav-link">Go to Manage Photos</Link>
-        </div>
+          </div>
+        ))}
       </div>
-    );
-}
+
+      {currentImageIndex !== null && (
+        <div
+          className="modal-overlay fixed top-0 left-0 w-full h-full bg-black bg-opacity-80 flex items-center justify-center z-50"
+          onClick={handleModalClick}
+          onTouchStart={handleTouchStart}
+          onTouchMove={handleTouchMove}
+          onTouchEnd={handleTouchEnd}
+        >
+          <div className="relative flex items-center justify-center">
+            <button
+              className="absolute left-0 text-white text-2xl bg-gray-800 bg-opacity-50 rounded-full p-2 hover:bg-opacity-75"
+              style={{ marginLeft: '-50px' }}
+              onClick={goToPrevImage}
+            >
+              &lt;
+            </button>
+            <img
+              className="max-w-full max-h-full mx-auto"
+              src={sharedPhotos[currentImageIndex].image}
+              alt="Large View"
+            />
+            <button
+              className="absolute right-0 text-white text-2xl bg-gray-800 bg-opacity-50 rounded-full p-2 hover:bg-opacity-75"
+              style={{ marginRight: '-50px' }}
+              onClick={goToNextImage}
+            >
+              &gt;
+            </button>
+          </div>
+        </div>
+      )}
+
+      {isLoading && <div className="loading-modal">Loading...</div>}
+      <div className="navigation-links">
+          <Link to="/" className="nav-link">Go to Main Page</Link>
+          <Link to="/manage" className="nav-link">Manage Your Photos</Link>
+      </div>
+    </div>
+  );
+} 

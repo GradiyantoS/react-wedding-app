@@ -10,7 +10,8 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "firebase": "^11.1.0",
+    "browser-image-compression": "^2.0.2",
+    "firebase": "^11.2.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-modal": "^3.16.3",
