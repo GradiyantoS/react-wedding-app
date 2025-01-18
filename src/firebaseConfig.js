@@ -11,15 +11,6 @@ const firebaseConfig = {
     appId: import.meta.env.VITE_FIREBASE_APP_ID
 };
 
-// const firebaseConfig = {
-//     apiKey: "AIzaSyBv6ac_JjYWrnIBKe4k_WJ2zI8eueUQj-k",
-//     authDomain: "react-wedding-album.firebaseapp.com",
-//     projectId: "react-wedding-album",
-//     storageBucket: "react-wedding-album.firebasestorage.app",
-//     messagingSenderId: "51536482323",
-//     appId: "1:51536482323:web:010bec1fa523896e2c2fe6"
-// };
-
 const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
 const storage = getStorage(app);
 const db = getFirestore(app);
