@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { ref, uploadBytes, getDownloadURL, deleteObject } from "firebase/storage";
-import { collection, query, where, getDocs,setDoc, doc, updateDoc, deleteDoc } from "firebase/firestore";
+import { collection, query, where, getDocs,setDoc, doc, updateDoc, deleteDoc, serverTimestamp } from "firebase/firestore";
 import { app,storage, db } from "../../firebaseConfig";
 import {v4 as uuidv4} from "uuid";
 import { Link } from 'react-router-dom';
@@ -74,6 +74,7 @@ export default function PhotoManagement() {
       username,
       image,
       is_public: false,
+      created_at: serverTimestamp()
     };
     console.log(imageData);
     await setDoc(doc(db, "images", id), imageData);

@@ -5,17 +5,28 @@ import background from '../assets/background.jpg';
 
 
 export default function MainPage(){
+
+    return (
+        <div className="main-page bg-cover bg-center min-h-screen flex flex-col justify-between" style={{ backgroundImage: `url(${background})` }}>
+          <div className="flex flex-col items-center justify-center text-center text-white p-6">
+            <h1 className="text-4xl font-bold mb-4 ">Derian & Felicia</h1>
+            <p className="text-med italic">Capture the moment and share it</p>
+          </div>
     
-    return(
-        <div className="main-page" style={{ backgroundImage: `url(${background})`, backgroundSize: 'cover', backgroundPosition: 'center', minHeight: '100vh' }}>
-            <header className="header text-center py-10">
-                <h1 className="text-4xl font-bold text-white">Your Wedding Moments</h1>
-                <p className="text-lg mt-4 text-white">Capture and Share Your Special Day</p>
-            </header>
-            <div className="buttons flex flex-col items-center mt-10">
-                <Link to="/manage" className="btn px-4 py-2 bg-blue-500 text-white rounded mt-4">Manage Your Photos</Link>
-                <Link to="/shared" className="btn px-4 py-2 bg-green-500 text-white rounded mt-4">View Shared Photos</Link>
-            </div>
+          <div className="button-container flex flex-col gap-4 p-6">
+            <a
+              href="/manage"
+              className="elegant-btn bg-black bg-opacity-75 text-white border border-white py-3 px-6 text-lg font-semibold rounded-md hover:bg-opacity-90 transition"
+            >
+              Manage Your Photos
+            </a>
+            <a
+              href="/shared"
+              className="elegant-btn bg-white text-black border border-black py-3 px-6 text-lg font-semibold rounded-md hover:bg-gray-200 transition"
+            >
+              View Shared Photos
+            </a>
+          </div>
         </div>
-    )
+    );
 }

@@ -44,10 +44,14 @@ export default function PhotoViewer() {
         ? query(
             collection(db, "images"),
             where("is_public", "==", true),
+            orderBy("created_at", "desc"),
             startAfter(lastDoc),
             limit(10)
           )
-        : query(collection(db, "images"), where("is_public", "==", true), limit(10));
+        : query(collection(db, "images"), 
+        where("is_public", "==", true), 
+        orderBy("created_at", "desc"),
+        limit(10));
 
       const querySnapshot = await getDocs(q);
 
