@@ -8,9 +8,11 @@ import '../styles/App.css';
 function AdminControlPage() {
     const [photos, setPhotos] = useState([]);
     const [users, setUsers] = useState([]);
+    const [filteredUsers, setFilteredUsers] = useState([]);
     const [isLoading, setIsLoading] = useState(false);
     const [isModalOpen, setIsModalOpen] = useState(true);
     const [credentials, setCredentials] = useState({ username: "", password: "" });
+    const [searchTerm, setSearchTerm] = useState("");
     const [selectedUsername, setSelectedUsername] = useState(null);
     const [selectedImage, setSelectedImage] = useState(null);
   
@@ -26,6 +28,12 @@ function AdminControlPage() {
         }
     }, []);
   
+    useEffect(() => {
+        setFilteredUsers(
+          users.filter((user) => user.username.toLowerCase().includes(searchTerm.toLowerCase()))
+        );
+    }, [searchTerm, users]);
+
     const validateCredentials = () => {
         const { username, password } = credentials;
         const credentialEnv = import.meta.env.VITE_ADMIN_CREDENTIALS; // Format: username#password
@@ -148,8 +156,15 @@ function AdminControlPage() {
   
             <div className="mt-6">
               <h3 className="text-lg font-bold">User Management</h3>
+              <input
+                type="text"
+                placeholder="Search users"
+                className="border px-4 py-2 rounded-lg w-full mb-4"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                />
               <div className="user-list mt-4 overflow-y-auto max-h-64 border rounded-lg p-4">
-                {users.map((user) => (
+                {filteredUsers.map((user) => (
                   <div
                     key={user.id}
                     className={`user-item flex items-center justify-between p-4 border rounded-lg mb-2 ${
