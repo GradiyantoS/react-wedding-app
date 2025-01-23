@@ -11,13 +11,40 @@ export default function PhotoViewer() {
   const [isLoading, setIsLoading] = useState(false);
   const [lastDoc, setLastDoc] = useState(null);
   const [hasMore, setHasMore] = useState(true);
+  const [isMobile, setIsMobile] = useState(false);
 
   const [startX, setStartX] = useState(null);
   const [endX, setEndX] = useState(null);
 
-  useEffect(() => {
-    fetchSharedPhotos(); // Fetch initial photos
-  }, []);
+  useEffect(()=>{
+    fetchSharedPhotos();
+
+    // Detect if the user is on a mobile device
+    const checkMobile = () => {
+      setIsMobile(window.matchMedia("(max-width: 768px)").matches);
+    };
+
+    checkMobile(); // Initial check
+    window.addEventListener("resize", checkMobile); // Recheck on window resize
+    return () => window.removeEventListener("resize", checkMobile);
+  },[])
+
+  useEffect(() => { // Fetch initial photos
+    if (!isMobile) return;
+    const handleScroll = () => {
+      if (
+        window.innerHeight + document.documentElement.scrollTop + 1 >=
+          document.documentElement.scrollHeight &&
+        !isLoading &&
+        hasMore
+      ) {
+        fetchSharedPhotos();
+      }
+    };
+
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, [isMobile,hasMore, isLoading]);
 
   const fetchSharedPhotos = async () => {
     if (isLoading || !hasMore) return; // Prevent multiple fetches or fetching when no more data
@@ -30,13 +57,13 @@ export default function PhotoViewer() {
             where("is_public", "==", true),
             orderBy("created_at", "desc"),
             startAfter(lastDoc),
-            limit(10) // Fetch next 10 documents
+            limit(2) // Fetch next 10 documents
           )
         : query(
             collection(db, "images"),
             where("is_public", "==", true),
             orderBy("created_at", "desc"),
-            limit(10) // Fetch first 10 documents
+            limit(2) // Fetch first 10 documents
           );
 
       const querySnapshot = await getDocs(q);
@@ -164,10 +191,11 @@ export default function PhotoViewer() {
       )}
 
       {isLoading && <div className="loading-modal">Loading...</div>}
-      {hasMore && (
-        <div className="mt-6 text-center">
+      
+      {!isMobile && hasMore && (
+        <div className="mt-6 text-center hidden md:block">
           <button
-            className="bg-yellow-500 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition"
+            className="bg-blue-500 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition"
             onClick={fetchSharedPhotos}
             disabled={isLoading}
           >
@@ -175,6 +203,8 @@ export default function PhotoViewer() {
           </button>
         </div>
       )}
+
+      {isLoading && <div className="text-center mt-4">Loading...</div>}
       <div className="navigation-links">
           <Link to="/" className="nav-link">Go to Main Page</Link>
           <Link to="/manage" className="nav-link">Manage Your Photos</Link>
