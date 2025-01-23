@@ -57,13 +57,13 @@ export default function PhotoViewer() {
             where("is_public", "==", true),
             orderBy("created_at", "desc"),
             startAfter(lastDoc),
-            limit(2) // Fetch next 10 documents
+            limit(10) // Fetch next 10 documents
           )
         : query(
             collection(db, "images"),
             where("is_public", "==", true),
             orderBy("created_at", "desc"),
-            limit(2) // Fetch first 10 documents
+            limit(10) // Fetch first 10 documents
           );
 
       const querySnapshot = await getDocs(q);
