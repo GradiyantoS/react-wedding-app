@@ -16,27 +16,11 @@ export default function PhotoViewer() {
   const [endX, setEndX] = useState(null);
 
   useEffect(() => {
-    fetchSharedPhotos();
+    fetchSharedPhotos(); // Fetch initial photos
   }, []);
 
-  useEffect(() => {
-    const handleScroll = () => {
-      if (
-        window.innerHeight + document.documentElement.scrollTop + 1 >=
-          document.documentElement.scrollHeight &&
-        hasMore &&
-        !isLoading
-      ) {
-        fetchSharedPhotos();
-      }
-    };
-  
-    window.addEventListener("scroll", handleScroll);
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, [hasMore]);
-
   const fetchSharedPhotos = async () => {
-    if (isLoading || !hasMore) return; // Prevent unnecessary fetches
+    if (isLoading || !hasMore) return; // Prevent multiple fetches or fetching when no more data
 
     setIsLoading(true);
     try {
@@ -46,30 +30,27 @@ export default function PhotoViewer() {
             where("is_public", "==", true),
             orderBy("created_at", "desc"),
             startAfter(lastDoc),
-            limit(10)
+            limit(10) // Fetch next 10 documents
           )
-        : query(collection(db, "images"), 
-        where("is_public", "==", true), 
-        orderBy("created_at", "desc"),
-        limit(10));
+        : query(
+            collection(db, "images"),
+            where("is_public", "==", true),
+            orderBy("created_at", "desc"),
+            limit(10) // Fetch first 10 documents
+          );
 
       const querySnapshot = await getDocs(q);
 
       if (!querySnapshot.empty) {
-        const newPhotos = [];
-        querySnapshot.forEach((doc) => {
-          const data = doc.data();
-          if (data.image && !sharedPhotos.find((photo) => photo.image === data.image)) {
-            // Only add unique images
-            newPhotos.push(data);
-          }
-        });
+        const newPhotos = querySnapshot.docs.map((doc) => ({
+          id: doc.id, // Add document ID
+          ...doc.data(),
+        }));
 
         setSharedPhotos((prevPhotos) => [...prevPhotos, ...newPhotos]);
-        setLastDoc(querySnapshot.docs[querySnapshot.docs.length - 1]);
-        setHasMore(querySnapshot.docs.length === 10); // Assume limit(10)
+        setLastDoc(querySnapshot.docs[querySnapshot.docs.length - 1]); // Update lastDoc
       } else {
-        setHasMore(false); // No more documents
+        setHasMore(false); // No more documents to fetch
       }
     } catch (error) {
       console.error("Error fetching shared photos:", error);
@@ -183,6 +164,17 @@ export default function PhotoViewer() {
       )}
 
       {isLoading && <div className="loading-modal">Loading...</div>}
+      {hasMore && (
+        <div className="mt-6 text-center">
+          <button
+            className="bg-yellow-500 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition"
+            onClick={fetchSharedPhotos}
+            disabled={isLoading}
+          >
+            {isLoading ? "Loading..." : "Load More"}
+          </button>
+        </div>
+      )}
       <div className="navigation-links">
           <Link to="/" className="nav-link">Go to Main Page</Link>
           <Link to="/manage" className="nav-link">Manage Your Photos</Link>
