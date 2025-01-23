@@ -17,7 +17,8 @@ export default function PhotoViewer() {
   const [endX, setEndX] = useState(null);
 
   useEffect(()=>{
-    fetchSharedPhotos();
+
+    fetchSharedPhotos()
 
     // Detect if the user is on a mobile device
     const checkMobile = () => {
@@ -51,9 +52,21 @@ export default function PhotoViewer() {
 
     setIsLoading(true);
     try {
+      const userQ = query(collection(db, "users"), where("is_blacklist", "==", false));
+      const userQuerySnapshot = await getDocs(userQ);
+      const validUsernames = userQuerySnapshot.docs.map((doc) => doc.data().username);
+
+      if (validUsernames.length === 0) {
+        setPhotos([]); // No photos to show
+        setHasMore(false);
+        setIsLoading(false);
+        return;
+      }
+
       const q = lastDoc
         ? query(
             collection(db, "images"),
+            where("username", "in", validUsernames),
             where("is_public", "==", true),
             orderBy("created_at", "desc"),
             startAfter(lastDoc),
@@ -61,6 +74,7 @@ export default function PhotoViewer() {
           )
         : query(
             collection(db, "images"),
+            where("username", "in", validUsernames),
             where("is_public", "==", true),
             orderBy("created_at", "desc"),
             limit(10) // Fetch first 10 documents
@@ -69,10 +83,8 @@ export default function PhotoViewer() {
       const querySnapshot = await getDocs(q);
 
       if (!querySnapshot.empty) {
-        const newPhotos = querySnapshot.docs.map((doc) => ({
-          id: doc.id, // Add document ID
-          ...doc.data(),
-        }));
+        const newPhotos = querySnapshot.docs
+          .map((docSnap) => ({ id: docSnap.id, ...docSnap.data() }))
 
         setSharedPhotos((prevPhotos) => [...prevPhotos, ...newPhotos]);
         setLastDoc(querySnapshot.docs[querySnapshot.docs.length - 1]); // Update lastDoc

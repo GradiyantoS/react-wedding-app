@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { ref, uploadBytes, getDownloadURL, deleteObject } from "firebase/storage";
-import { collection, query, where, getDocs,setDoc, doc, updateDoc, deleteDoc, serverTimestamp } from "firebase/firestore";
+import { collection, query, where, getDocs,getDoc,setDoc, doc, updateDoc, deleteDoc, serverTimestamp } from "firebase/firestore";
 import { app,storage, db } from "../../firebaseConfig";
 import {v4 as uuidv4} from "uuid";
 import { Link } from 'react-router-dom';
@@ -57,12 +57,36 @@ export default function PhotoManagement() {
     }
   };
 
-  const handleAddUser = () => {
-    const uuid = uuidv4();
-    localStorage.setItem('session_id', uuid);
-    localStorage.setItem('username', username);
-    setSessionId(uuid);
-    setIsModalOpen(false);
+  const handleAddUser = async () => {
+    if (!username) return;
+
+    try {
+      const usersCollectionRef = collection(db, "users");
+      const userQuery = query(usersCollectionRef, where("username", "==", username));
+      const userQuerySnapshot = await getDocs(userQuery);
+  
+      if (userQuerySnapshot.empty) {
+        const newSessionId = uuidv4();
+        await setDoc(doc(usersCollectionRef, username), {
+          username,
+          session_id: newSessionId,
+          is_blacklist: false,
+        });
+  
+        localStorage.setItem("session_id", newSessionId);
+        localStorage.setItem("username", username);
+        console.log(`User '${username}' added successfully with session ID '${newSessionId}'.`);
+      } else {
+        const existingUser = userQuerySnapshot.docs[0].data();
+        localStorage.setItem("session_id", existingUser.session_id);
+        localStorage.setItem("username", existingUser.username);
+        console.log(`User '${existingUser.username}' already exists. Session ID '${existingUser.session_id}' retrieved.`);
+      }
+  
+      setIsModalOpen(false); // Close the modal after setting the session
+    } catch (error) {
+      console.error("Error adding user:", error);
+    }
   };
 
 
